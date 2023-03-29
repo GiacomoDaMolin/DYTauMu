@@ -269,9 +269,9 @@ cout<<"Call completed!"<<endl;
     else for(int i=0;i<observables.size();i++) Histos.push_back(temp);
     
     //get histos nominal values
-    temp= new TH1D(observables[0].c_str(),observables[0].c_str(),40,7,207);
+    temp= new TH1D(observables[0].c_str(),observables[0].c_str(),20,25,205);
     Histos[0] = (TH1D*)temp->Clone();
-    temp = new TH1D(observables[1].c_str(),observables[1].c_str(),40, 2, 202);
+    temp = new TH1D(observables[1].c_str(),observables[1].c_str(),20,22,202);
     Histos[1] = (TH1D*)temp->Clone();
     temp = new TH1D(observables[2].c_str(),observables[2].c_str(),40, 12, 412);
     Histos[2]= (TH1D*)temp->Clone();
@@ -310,10 +310,10 @@ cout<<"Call completed!"<<endl;
         Int_t Tau_idx = -1;
         for (UInt_t j = 0; j < nTau; j++){
 		if (Tau_decayMode[j]>2 && Tau_decayMode[j]<10) continue;
-             if(!Data){
-			     double ScaleE=Tau_Escale->evaluate({Tau_pt[j],abs(Tau_eta[j]),Tau_decayMode[j],Tau_genPartFlav[j],"DeepTau2017v2p1","nom"});
-			     Tau_p4->SetPtEtaPhiM(Tau_pt[j]*ScaleE, Tau_eta[j], Tau_phi[j], Tau_mass[j]*ScaleE);
-			    }
+             double ScaleE=1.;
+		if(!Data){ScaleE=Tau_Escale->evaluate({Tau_pt[j],abs(Tau_eta[j]),Tau_decayMode[j],Tau_genPartFlav[j],"DeepTau2017v2p1","nom"});}
+
+		Tau_p4->SetPtEtaPhiM(Tau_pt[j]*ScaleE, Tau_eta[j], Tau_phi[j], Tau_mass[j]*ScaleE);
             if ((Tau_p4->Pt()>22. && abs(Tau_eta[j])<2.3)&&(Tau_idDeepTau2017v2p1VSe[j]>=8 && Tau_idDeepTau2017v2p1VSmu[j]>=8 && Tau_idDeepTau2017v2p1VSjet[j]>=32)){ //Loose e- T mu T jet
 		if (Tau_decayMode[j]<=2) {OneProng=true;}
 		if (Tau_decayMode[j]>=10) {ThreeProng=true;}
@@ -355,7 +355,7 @@ cout<<"Call completed!"<<endl;
 	vector<int> njet_in_collection; vector<int> flavor; vector<bool> tagged;
 	double t_weight=1.;
         for (size_t j = 0; j < nJet; j++) {
-            if((abs(Jet_eta[j]) < 2.4) && Jet_pt[j]>25 && (Jet_jetId[j]==2 || Jet_jetId[j]==6)){
+            if((abs(Jet_eta[j]) < 2.4) && Jet_pt[j]>30 && (Jet_jetId[j]==2 || Jet_jetId[j]==6)){
 	    TLorentzVector *Tjet_p4 = new TLorentzVector();
 	    Tjet_p4->SetPtEtaPhiM(Jet_pt[j], Jet_eta[j], Jet_phi[j], Jet_mass[j]);
 	    if((Tjet_p4->DeltaR(*Muon_p4)<0.4) || (Tjet_p4->DeltaR(*Tau_p4)<0.4)) {delete Tjet_p4; continue;}
@@ -402,7 +402,6 @@ cout<<"Call completed!"<<endl;
         if (one_Bjet){ n_dropped++;  continue;}
          
         if(!Data){ 
-		 cout<<"qui"<<endl;
 		Weight = getWeight(IntLuminosity, crossSection, genWeight, genEventSumw);
 		Weight *=  getTopPtWeight(GenPart_pdgId,GenPart_statusFlags,GenPart_pt,nGenPart);
 		Weight *= pu_correction->evaluate({N_pu_vertices, "nominal"});
@@ -429,7 +428,6 @@ cout<<"Call completed!"<<endl;
 			else VecWeights[j]*= muon_iso->evaluate({"2018_UL", abs(Muon_eta[muon_idx]), Muon_pt[muon_idx], "sf"});
 		} 
 		Master_index+=2;
-		cout<<"mu pre trigger are fine"<<endl;
 		for(int j=0;j<VecWeights.size();j++){
 			if(systematics){
 				if(j==Master_index) {VecWeights[j]*= muon_trigger->evaluate({"2018_UL", abs(Muon_eta[muon_idx]), Muon_pt[muon_idx], "systup"}); continue;}
@@ -439,7 +437,6 @@ cout<<"Call completed!"<<endl;
 			else VecWeights[j]*= muon_trigger->evaluate({"2018_UL", abs(Muon_eta[muon_idx]), Muon_pt[muon_idx], "sf"});
 		} 
 		Master_index+=2;
-		cout<<"mu are fine"<<endl;
 		for(int j=0;j<VecWeights.size();j++){
 			if(systematics){
 				if(j==Master_index) {VecWeights[j]*= Tau_idvsmu->evaluate({abs(Tau_eta[Tau_idx]),Tau_genPartFlav[Tau_idx],"Tight","up"}); continue;}
@@ -458,7 +455,6 @@ cout<<"Call completed!"<<endl;
 			else VecWeights[j]*= Tau_idvse->evaluate({abs(Tau_eta[Tau_idx]),Tau_genPartFlav[Tau_idx],"Loose","nom"});
 		} 
 		Master_index+=2;
-		cout<<"tau vs l fine"<<endl;
 		for(int j=0;j<VecWeights.size();j++){
 			if(systematics){
 				if(j==Master_index) {VecWeights[j]*= Tau_idvsjet->evaluate({Tau_p4->Pt(), Tau_decayMode[Tau_idx],Tau_genPartFlav[Tau_idx],"Tight","up","pt"}); continue;}
@@ -468,7 +464,6 @@ cout<<"Call completed!"<<endl;
 			else VecWeights[j]*=Tau_idvsjet->evaluate({Tau_p4->Pt(), Tau_decayMode[Tau_idx],Tau_genPartFlav[Tau_idx],"Tight","nom","pt"});
 		} 
 		Master_index+=2;
-		cout<<"tau  fine"<<endl;
 		for(auto &k: VecWeights) k*=t_weight; 
 		double Weight2=1.;
 		for(int jj=0;jj<flavor.size();jj++){

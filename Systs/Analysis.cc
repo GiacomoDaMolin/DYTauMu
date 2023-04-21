@@ -192,7 +192,7 @@ cout<<"Call completed!"<<endl;
     // open correctionfiles
     
     string muon_json = "/afs/cern.ch/user/g/gdamolin/Johan/TTbar/Python_Analysis/corrections/muon_Z.json.gz";
-    string Tau_json = "/afs/cern.ch/user/g/gdamolin/Johan/TTbar/Python_Analysis/corrections/tau.json.gz";
+    string Tau_json = "/afs/cern.ch/user/g/gdamolin/public/corrections/tau.json.gz";
     string jets_json = "/afs/cern.ch/user/g/gdamolin/Johan/TTbar/Python_Analysis/corrections/jet_jmar.json";
     string b_tag_json = "/afs/cern.ch/user/g/gdamolin/Johan/TTbar/Python_Analysis/corrections/btagging.json.gz";
     string pileup_json = "/afs/cern.ch/user/g/gdamolin/Johan/TTbar/Python_Analysis/corrections/puWeights.json.gz";
@@ -257,30 +257,74 @@ cout<<"Call completed!"<<endl;
 	    trun_out->Branch("nEv", &n_events);
 	    trun_out->Fill();
     }
-    
+
+    vector<string> observables2,observables3;
+    if(processname=="TT2LL") {
+	processname="TT2ll";
+    	observables2= {"TT2lT_Muon_pt","TT2lT_Tau_pt","TT2lT_Invariant_Mass","TT2lT_Lepton_Acoplanarity","TT2lT_Njets"}; 
+    	observables3= {"TT2TT_Muon_pt","TT2TT_Tau_pt","TT2TT_Invariant_Mass","TT2TT_Lepton_Acoplanarity","TT2TT_Njets"}; 
+    }
+    if(processname=="DY") {
+	processname="DY2ee";
+    	observables2= {"DY2mm_Muon_pt","DY2mm_Tau_pt","DY2mm_Invariant_Mass","DY2mm_Lepton_Acoplanarity","DY2mm_Njets"}; 
+    	observables3= {"DY2TT_Muon_pt","DY2TT_Tau_pt","DY2TT_Invariant_Mass","DY2TT_Lepton_Acoplanarity","DY2TT_Njets"}; 
+    }    
+
+
     vector<string> observables= {processname+"_Muon_pt",processname+"_Tau_pt",processname+"_Invariant_Mass",processname+"_Lepton_Acoplanarity",processname+"_Njets"}; 
     vector<string> systs= {"Muon_Id","Muon_Iso","Muon_trigger","Tau_Id_mu","Tau_Id_Ele","Tau_Id_Jet"};
     vector<string> shift={"","Up","Down"};
 
      
     TH1D* temp=NULL;
-    vector<TH1D*>  Histos;
-    if(systematics){ for(int i=0;i<observables.size()*(systs.size()*2+1);i++) Histos.push_back(temp); }
-    else for(int i=0;i<observables.size();i++) Histos.push_back(temp);
+    vector<TH1D*>  Histos; //defaulted to LL if TT2LL && ee if DY
+    vector<TH1D*>  HistosTL,HistosTT; //correspond to mumu && TauTau in DY
+    if(systematics){ 
+	for(int i=0;i<observables.size()*(systs.size()*2+1);i++) {Histos.push_back(temp); 
+		if(observables2.size()>0){HistosTL.push_back(temp); HistosTT.push_back(temp);}
+	}
+     }
+    else for(int i=0;i<observables.size();i++) {Histos.push_back(temp); if(observables2.size()>0){HistosTL.push_back(temp); HistosTT.push_back(temp);}}
+    
     
     //get histos nominal values
-    temp= new TH1D(observables[0].c_str(),observables[0].c_str(),20,25,205);
+    temp= new TH1D(observables[0].c_str(),observables[0].c_str(),40,25,205);
     Histos[0] = (TH1D*)temp->Clone();
-    temp = new TH1D(observables[1].c_str(),observables[1].c_str(),20,22,202);
+    temp = new TH1D(observables[1].c_str(),observables[1].c_str(),40,22,202);
     Histos[1] = (TH1D*)temp->Clone();
     temp = new TH1D(observables[2].c_str(),observables[2].c_str(),40, 12, 412);
     Histos[2]= (TH1D*)temp->Clone();
     temp = new TH1D(observables[3].c_str(),observables[3].c_str(),40,0, 2*M_PI);
     Histos[3]= (TH1D*)temp->Clone();
-    temp = new TH1D(observables[4].c_str(),observables[4].c_str(),12,0,12);
+    temp = new TH1D(observables[4].c_str(),observables[4].c_str(),5,1,6);
     Histos[4] = (TH1D*)temp->Clone();
+
+ if(HistosTT.size()>0){
+	temp= new TH1D(observables2[0].c_str(),observables2[0].c_str(),40,25,205);
+	HistosTL[0] = (TH1D*)temp->Clone();
+	temp = new TH1D(observables2[1].c_str(),observables2[1].c_str(),40,22,202);
+	HistosTL[1] = (TH1D*)temp->Clone();
+	temp = new TH1D(observables2[2].c_str(),observables2[2].c_str(),40, 12, 412);
+	HistosTL[2]= (TH1D*)temp->Clone(); 
+	temp= new TH1D(observables2[3].c_str(),observables2[3].c_str(),40,0, 2*M_PI);
+	HistosTL[3] = (TH1D*)temp->Clone();
+	temp = new TH1D(observables2[4].c_str(),observables2[4].c_str(),5,1,6);
+	HistosTL[4]= (TH1D*)temp->Clone();
+
+	temp= new TH1D(observables3[0].c_str(),observables3[0].c_str(),40,25,205);
+	HistosTT[0] = (TH1D*)temp->Clone();
+	temp = new TH1D(observables3[1].c_str(),observables3[1].c_str(),40,22,202);
+	HistosTT[1] = (TH1D*)temp->Clone();
+	temp = new TH1D(observables3[2].c_str(),observables3[2].c_str(),40, 12, 412);
+	HistosTT[2]= (TH1D*)temp->Clone(); 
+	temp= new TH1D(observables3[3].c_str(),observables3[3].c_str(),40,0, 2*M_PI);
+	HistosTT[3] = (TH1D*)temp->Clone();
+	temp = new TH1D(observables3[4].c_str(),observables3[4].c_str(),5,1,6);
+	HistosTT[4]= (TH1D*)temp->Clone();
+    }
     
     int auxindex=observables.size()-1;
+    int idx2=auxindex,idx3=auxindex;
     //here loop on systematics, clone the histo and do your things
     if(systematics){
     	for(int i=0; i<systs.size(); i++){
@@ -290,13 +334,30 @@ cout<<"Call completed!"<<endl;
 		for(int j=0;j<observables.size();j++){
 		    	 Histos[++auxindex]=cloneDims1d(Histos[j],(systs[i]+"Down").c_str());	
 	    	}
-    	} 
+    	}
+	if(HistosTT.size()>0){
+		for(int i=0; i<systs.size(); i++){
+			for(int j=0;j<observables2.size();j++){
+				    	 HistosTL[++idx2]=cloneDims1d(HistosTL[j],(systs[i]+"Up").c_str());	
+			    	}
+			for(int j=0;j<observables2.size();j++){
+				    	 HistosTL[++idx2]=cloneDims1d(HistosTL[j],(systs[i]+"Down").c_str());	
+			    	}
+			for(int j=0;j<observables3.size();j++){
+				    	 HistosTT[++idx3]=cloneDims1d(HistosTT[j],(systs[i]+"Up").c_str());	
+			    	}
+			for(int j=0;j<observables3.size();j++){
+				    	 HistosTT[++idx3]=cloneDims1d(HistosTT[j],(systs[i]+"Down").c_str());	
+			    	}
+		}
+	} 
    }
 
    if(systematics && auxindex!=observables.size()*(systs.size()*2+1)-1) cout<<"Something may go terribly wrong here!"<< auxindex<<" vs "<<observables.size()*(systs.size()*2+1)-1 <<endl;
-
+  int cat=0;
     #pragma omp parallel for
     for (UInt_t i = 0; i <nEv; i++){
+	cat=0;
         tin->GetEntry(i);
         if (i % 100000 == 0) std::cout << "Processing entry " << i << " of " << nEv << endl;
         
@@ -314,7 +375,7 @@ cout<<"Call completed!"<<endl;
 		if(!Data){ScaleE=Tau_Escale->evaluate({Tau_pt[j],abs(Tau_eta[j]),Tau_decayMode[j],Tau_genPartFlav[j],"DeepTau2017v2p1","nom"});}
 
 		Tau_p4->SetPtEtaPhiM(Tau_pt[j]*ScaleE, Tau_eta[j], Tau_phi[j], Tau_mass[j]*ScaleE);
-            if ((Tau_p4->Pt()>22. && abs(Tau_eta[j])<2.3)&&(Tau_idDeepTau2017v2p1VSe[j]>=8 && Tau_idDeepTau2017v2p1VSmu[j]>=8 && Tau_idDeepTau2017v2p1VSjet[j]>=32)){ //Loose e- T mu T jet
+            if ((Tau_p4->Pt()>22. && abs(Tau_eta[j])<2.3)&&(Tau_idDeepTau2017v2p1VSe[j]>=2 && Tau_idDeepTau2017v2p1VSmu[j]>=8 && Tau_idDeepTau2017v2p1VSjet[j]>=32)){ //VVLoose e- T mu T jet
 		if (Tau_decayMode[j]<=2) {OneProng=true;}
 		if (Tau_decayMode[j]>=10) {ThreeProng=true;}
 		if (!(OneProng || ThreeProng)) {continue;}
@@ -400,6 +461,10 @@ cout<<"Call completed!"<<endl;
           }//end kinematic if
         }//end for
         if (one_Bjet){ n_dropped++;  continue;}
+
+	if (processname=="TT2ll") {cat=getCategoryTT(GenPart_pdgId,GenPart_genPartIdxMother,nGenPart);}
+
+	if (processname=="DY2ee") {cat=getCategoryDY(GenPart_pdgId,GenPart_genPartIdxMother,nGenPart);}
          
         if(!Data){ 
 		Weight = getWeight(IntLuminosity, crossSection, genWeight, genEventSumw);
@@ -448,20 +513,20 @@ cout<<"Call completed!"<<endl;
 		Master_index+=2;
 		for(int j=0;j<VecWeights.size();j++){
 			if(systematics){
-				if(j==Master_index) {VecWeights[j]*= Tau_idvse->evaluate({abs(Tau_eta[Tau_idx]),Tau_genPartFlav[Tau_idx],"Loose","up"}); continue;}
-				if(j==Master_index+1) {VecWeights[j]*= Tau_idvse->evaluate({abs(Tau_eta[Tau_idx]),Tau_genPartFlav[Tau_idx],"Loose","down"}); continue;}
-				else VecWeights[j]*= Tau_idvse->evaluate({abs(Tau_eta[Tau_idx]),Tau_genPartFlav[Tau_idx],"Loose","nom"});
+				if(j==Master_index) {VecWeights[j]*= Tau_idvse->evaluate({abs(Tau_eta[Tau_idx]),Tau_genPartFlav[Tau_idx],"VVLoose","up"}); continue;}
+				if(j==Master_index+1) {VecWeights[j]*= Tau_idvse->evaluate({abs(Tau_eta[Tau_idx]),Tau_genPartFlav[Tau_idx],"VVLoose","down"}); continue;}
+				else VecWeights[j]*= Tau_idvse->evaluate({abs(Tau_eta[Tau_idx]),Tau_genPartFlav[Tau_idx],"VVLoose","nom"});
 			}
-			else VecWeights[j]*= Tau_idvse->evaluate({abs(Tau_eta[Tau_idx]),Tau_genPartFlav[Tau_idx],"Loose","nom"});
+			else VecWeights[j]*= Tau_idvse->evaluate({abs(Tau_eta[Tau_idx]),Tau_genPartFlav[Tau_idx],"VVLoose","nom"});
 		} 
 		Master_index+=2;
 		for(int j=0;j<VecWeights.size();j++){
 			if(systematics){
-				if(j==Master_index) {VecWeights[j]*= Tau_idvsjet->evaluate({Tau_p4->Pt(), Tau_decayMode[Tau_idx],Tau_genPartFlav[Tau_idx],"Tight","up","pt"}); continue;}
-				if(j==Master_index+1) {VecWeights[j]*= Tau_idvsjet->evaluate({Tau_p4->Pt(), Tau_decayMode[Tau_idx],Tau_genPartFlav[Tau_idx],"Tight","down","pt"}); continue;}
-				else VecWeights[j]*= Tau_idvsjet->evaluate({Tau_p4->Pt(), Tau_decayMode[Tau_idx],Tau_genPartFlav[Tau_idx],"Tight","nom","pt"});
+				if(j==Master_index) {VecWeights[j]*= Tau_idvsjet->evaluate({Tau_p4->Pt(), Tau_decayMode[Tau_idx],Tau_genPartFlav[Tau_idx],"Tight","VVLoose","up","pt"}); continue;}
+				if(j==Master_index+1) {VecWeights[j]*= Tau_idvsjet->evaluate({Tau_p4->Pt(), Tau_decayMode[Tau_idx],Tau_genPartFlav[Tau_idx],"Tight","VVLoose","down","pt"}); continue;}
+				else VecWeights[j]*= Tau_idvsjet->evaluate({Tau_p4->Pt(), Tau_decayMode[Tau_idx],Tau_genPartFlav[Tau_idx],"Tight","VVLoose","nom","pt"});
 			}
-			else VecWeights[j]*=Tau_idvsjet->evaluate({Tau_p4->Pt(), Tau_decayMode[Tau_idx],Tau_genPartFlav[Tau_idx],"Tight","nom","pt"});
+			else VecWeights[j]*=Tau_idvsjet->evaluate({Tau_p4->Pt(), Tau_decayMode[Tau_idx],Tau_genPartFlav[Tau_idx],"Tight","VVLoose","nom","pt"});
 		} 
 		Master_index+=2;
 		for(auto &k: VecWeights) k*=t_weight; 
@@ -508,11 +573,29 @@ cout<<"Call completed!"<<endl;
         Acopl_emu=M_PI-(Tau_p4->DeltaPhi(*Muon_p4));
 	
 	for(int k=0;k<VecWeights.size();k++){
-		Histos[k*observables.size()] ->Fill(muon_pt,VecWeights[k]);
-    		Histos[k*observables.size()+1] ->Fill(tau_pt,VecWeights[k]);
-    		Histos[k*observables.size()+2] ->Fill(invMass,VecWeights[k]);
-    		Histos[k*observables.size()+3] ->Fill(Acopl_emu,VecWeights[k]);
-    		Histos[k*observables.size()+4] ->Fill(Njets,VecWeights[k]);
+		if(cat==0 || cat==2){
+			Histos[k*observables.size()] ->Fill(muon_pt,VecWeights[k]);
+	    		Histos[k*observables.size()+1] ->Fill(tau_pt,VecWeights[k]);
+	    		Histos[k*observables.size()+2] ->Fill(invMass,VecWeights[k]);
+	    		Histos[k*observables.size()+3] ->Fill(Acopl_emu,VecWeights[k]);
+	    		Histos[k*observables.size()+4] ->Fill(Njets,VecWeights[k]);
+		}
+		if(HistosTT.size()>0){
+		if(cat==3){
+			HistosTL[k*observables.size()] ->Fill(muon_pt,VecWeights[k]);
+	    		HistosTL[k*observables.size()+1] ->Fill(tau_pt,VecWeights[k]);
+	    		HistosTL[k*observables.size()+2] ->Fill(invMass,VecWeights[k]);
+	    		HistosTL[k*observables.size()+3] ->Fill(Acopl_emu,VecWeights[k]);
+	    		HistosTL[k*observables.size()+4] ->Fill(Njets,VecWeights[k]);
+			}
+		if(cat==4){
+			HistosTT[k*observables.size()] ->Fill(muon_pt,VecWeights[k]);
+	    		HistosTT[k*observables.size()+1] ->Fill(tau_pt,VecWeights[k]);
+	    		HistosTT[k*observables.size()+2] ->Fill(invMass,VecWeights[k]);
+	    		HistosTT[k*observables.size()+3] ->Fill(Acopl_emu,VecWeights[k]);
+	    		HistosTT[k*observables.size()+4] ->Fill(Njets,VecWeights[k]);
+			}
+		}
 		if(!systematics){break;}
 		}
 
@@ -533,6 +616,11 @@ cout<<"Call completed!"<<endl;
     if(!Data) trun_out->Write();
 
     for(auto &k: Histos) HistWrite(k);
+
+    if(HistosTT.size()>0){
+	 for(auto &k: HistosTL) HistWrite(k);
+	 for(auto &k: HistosTT) HistWrite(k);
+    }
 
     fout->Close();
 }

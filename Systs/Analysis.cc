@@ -9,6 +9,7 @@
 #include "TLorentzVector.h"
 #include "TRandom3.h"
 
+#include "/afs/cern.ch/user/g/gdamolin/public/json.hpp"
 // include user defined histograms and auxiliary macros
 #include "Auxiliary.cc"
 #include "/afs/cern.ch/user/g/gdamolin/Johan/TTbar/Python_Analysis/corrections/roccor/RoccoR.cc"
@@ -17,6 +18,7 @@
 #include "correction.h"
 using namespace std;
 using correction::CorrectionSet;
+using json = nlohmann::json;
 
 #define MAX_ARRAY_SIZE 128
 #define GEN_MAX_ARRAY_SIZE 1024
@@ -31,7 +33,10 @@ void Mixed_Analysis(string inputFile, string ofile, double crossSection = -1, do
         std::cout << "WARNING: crossection " << crossSection << " and Integrated luminosity " << IntLuminosity << endl;
     }
 
-cout<<"Call completed!"<<endl;
+ cout<<"Call completed!"<<endl;
+ 
+  std::ifstream f("/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions18/13TeV/Legacy_2018/Cert_314472-325175_13TeV_Legacy2018_Collisions18_JSON.txt");
+  json goldenjson = json::parse(f);
  if (Data) {systematics=false;}
 
     TFile *fin = TFile::Open(inputFile.c_str());
@@ -52,6 +57,16 @@ cout<<"Call completed!"<<endl;
     TTree *tin = static_cast<TTree *>(fin->Get("Events"));
 
     tin->SetBranchStatus("*", 0);
+
+
+    UInt_t run, luminosityBlock;
+    if(Data){
+	tin->SetBranchStatus("run", 1);
+    	tin->SetBranchAddress("run", &run);
+    	tin->SetBranchStatus("luminosityBlock", 1);
+    	tin->SetBranchAddress("luminosityBlock", &luminosityBlock);
+	}
+
     Float_t Muon_pt[MAX_ARRAY_SIZE], Tau_pt[MAX_ARRAY_SIZE], Jet_pt[MAX_ARRAY_SIZE];
     tin->SetBranchStatus("Tau_pt", 1);
     tin->SetBranchAddress("Tau_pt", &Tau_pt);
@@ -354,12 +369,19 @@ cout<<"Call completed!"<<endl;
    }
 
    if(systematics && auxindex!=observables.size()*(systs.size()*2+1)-1) cout<<"Something may go terribly wrong here!"<< auxindex<<" vs "<<observables.size()*(systs.size()*2+1)-1 <<endl;
-  int cat=0;
+   int cat=0; //category of final state index
+   int rej_badlumi=0, ndropped_m=0;
     #pragma omp parallel for
     for (UInt_t i = 0; i <nEv; i++){
 	cat=0;
         tin->GetEntry(i);
         if (i % 100000 == 0) std::cout << "Processing entry " << i << " of " << nEv << endl;
+        
+	//apply lumiblockselections
+	if(Data && lumicheck(goldenjson, run, luminosityBlock)) {rej_badlumi++; continue;} //jump event if bool is true, i.e. not good lumisec
+
+	//TODO: MET-filters
+
         
 	if (!(HLT_IsoMu24))        { trigger_dropped++; continue; }
 
@@ -460,7 +482,9 @@ cout<<"Call completed!"<<endl;
             }//end if(jetpt>50 !!puid==7)
           }//end kinematic if
         }//end for
-        if (one_Bjet){ n_dropped++;  continue;}
+        if ( selection && one_Bjet){ n_dropped++;  continue;}
+	invMass = (*(Muon_p4) + *(Tau_p4)).M();
+	if (invMass<12){ ndropped_m++;  continue;}
 
 	if (processname=="TT2ll") {cat=getCategoryTT(GenPart_pdgId,GenPart_genPartIdxMother,nGenPart);}
 
@@ -569,7 +593,6 @@ cout<<"Call completed!"<<endl;
         muon_eta = Muon_eta[muon_idx];
         tau_pt = Tau_p4->Pt();
         tau_eta = Tau_eta[Tau_idx];
-        invMass = (*(Muon_p4) + *(Tau_p4)).M();
         Acopl_emu=M_PI-(Tau_p4->DeltaPhi(*Muon_p4));
 	
 	for(int k=0;k<VecWeights.size();k++){
@@ -604,8 +627,12 @@ cout<<"Call completed!"<<endl;
 
 
     std::cout << "NeV = " << nEv << endl;
+    std::cout << "discarded by lumi .json" <<rej_badlumi <<endl;
+    nEv-=rej_badlumi;
     std::cout << "trigger dropped = " << trigger_dropped << endl;
     std::cout << "selections dropped = " << n_dropped << endl; //remember the cross trigger in Data
+    std::cout << "dropped by mass requirement " << ndropped_m << endl;
+    n_dropped+=ndropped_m;
 
     std::cout << "Fraction of events discarded by trigger = " << (trigger_dropped * 1. / nEv) << endl;
     int Rem_trigger=nEv-trigger_dropped; //remember the cross trigger in Data

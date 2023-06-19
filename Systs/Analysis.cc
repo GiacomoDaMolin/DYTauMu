@@ -430,6 +430,7 @@ void Mixed_Analysis(string inputFile, string ofile, double crossSection = -1, do
         }
         if (muon_idx==-1)  { n_dropped++; continue;}
         bool selection = ((Muon_charge[muon_idx] * Tau_charge[Tau_idx]) < 0);
+	if(!selection)  { n_dropped++; continue;}
         Float_t jet_btag_deepFlav_wp = 0.2783;
         bool one_Bjet = false;
         int id_m_jet = -1; 
@@ -482,7 +483,7 @@ void Mixed_Analysis(string inputFile, string ofile, double crossSection = -1, do
             }//end if(jetpt>50 !!puid==7)
           }//end kinematic if
         }//end for
-        if ( selection && one_Bjet){ n_dropped++;  continue;}
+        if (one_Bjet){ n_dropped++;  continue;}
 	invMass = (*(Muon_p4) + *(Tau_p4)).M();
 	if (invMass<12){ ndropped_m++;  continue;}
 
